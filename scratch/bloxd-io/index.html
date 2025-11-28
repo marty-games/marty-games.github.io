@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Open Project</title>
+    <style>
+        /* Background video covers full screen */
+        #bg-video {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: -1;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            color: white;
+            text-shadow: 0 0 8px black;
+        }
+
+        h2 {
+            margin: 10px 0 10px 0;
+            text-align: center;
+        }
+
+        .top-bar {
+            padding-top: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            z-index: 2;
+        }
+
+        .button-container {
+            display: flex;
+            gap: 20px;
+            padding-bottom: 10px;
+        }
+
+        button {
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            transition: transform 0.15s ease, background 0.25s ease;
+        }
+
+        /* Scratch orange */
+        .scratch-btn {
+            background: #FFAB19;
+        }
+        .scratch-btn:hover {
+            background: #e69917;
+        }
+
+        /* TurboWarp red */
+        .turbowarp-btn {
+            background: #E53935;
+        }
+        .turbowarp-btn:hover {
+            background: #c62828;
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        /* Fullscreen iframe */
+        #viewer {
+            flex: 1;
+            width: 100%;
+            border: none;
+            background: rgba(0,0,0,0.3);
+        }
+
+        /* Overlay text centered */
+        #placeholder {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 25px;
+            color: white;
+            text-shadow: 0 0 12px black;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Background video -->
+    <video id="bg-video" autoplay muted loop>
+        <source src="background.mp4" type="video/mp4">
+        Your browser does not support the video tag.
+    </video>
+
+    <!-- Placeholder text -->
+    <div id="placeholder">Please Select Engine</div>
+
+    <div class="top-bar">
+        <h2>Open Project</h2>
+
+        <div class="button-container">
+            <button class="scratch-btn"
+                onclick="loadProject('https://scratch.mit.edu/projects/1215933941/embed')">
+                Play via Scratch
+            </button>
+
+            <button class="turbowarp-btn"
+                onclick="loadProject('https://turbowarp.org/1215933941/embed?hqpen')">
+                Play via TurboWarp
+            </button>
+        </div>
+    </div>
+
+    <!-- Fullscreen iframe -->
+    <iframe id="viewer"></iframe>
+
+    <script>
+        const viewer = document.getElementById("viewer");
+        const placeholder = document.getElementById("placeholder");
+
+        function loadProject(url) {
+            viewer.src = url;
+            placeholder.style.opacity = 0;   // fade out
+            placeholder.style.pointerEvents = "none";
+        }
+    </script>
+
+</body>
+</html>
