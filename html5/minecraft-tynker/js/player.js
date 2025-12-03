@@ -1,5 +1,4 @@
-// js/player.js
-// Handles player movement, input, camera rotation, and collision.
+// js/player.js — Fixed for dual-canvas setup (uses glCanvas for pointer lock)
 
 (function (global) {
   'use strict';
@@ -24,9 +23,12 @@
     onGround: false,
     input: { w:false, a:false, s:false, d:false, space:false },
 
+    _mouseMoveHandler: null, // will store the bound handler
+
     init: function () {
-      this._setupPointerLock();
+      // Attach input handlers and pointer lock
       this._setupInput();
+      this._setupPointerLock();
     },
 
     /* ---------------------------------------------------------
@@ -51,30 +53,45 @@
     },
 
     /* ---------------------------------------------------------
-       Mouse look / pointer lock
+       Mouse look / pointer lock (uses glCanvas)
     --------------------------------------------------------- */
     _setupPointerLock: function () {
-      const canvas = document.getElementById('overlay');
+      const canvas = document.getElementById('glCanvas');
+      if (!canvas) {
+        console.error('Player.init ERROR: glCanvas not found. Pointer lock disabled.');
+        return;
+      }
 
+      // bind here so we can remove later
+      this._mouseMoveHandler = this._mouseMove.bind(this);
+
+      // Request pointer lock on click
       canvas.addEventListener('click', () => {
-        canvas.requestPointerLock();
+        if (canvas.requestPointerLock) canvas.requestPointerLock();
       });
 
+      // pointerlockchange handler
       document.addEventListener('pointerlockchange', () => {
         if (document.pointerLockElement === canvas) {
-          document.addEventListener('mousemove', this._mouseMove);
+          document.addEventListener('mousemove', this._mouseMoveHandler);
         } else {
-          document.removeEventListener('mousemove', this._mouseMove);
+          document.removeEventListener('mousemove', this._mouseMoveHandler);
         }
       });
     },
 
-    _mouseMove: (e) => {
-      Player.yaw   -= e.movementX * Player.sensitivity;
-      Player.pitch -= e.movementY * Player.sensitivity;
+    _mouseMove: function (e) {
+      // Use small sanity checks if movementX/Y undefined (older browsers)
+      const movX = (typeof e.movementX === 'number') ? e.movementX : (e.mozMovementX || e.webkitMovementX || 0);
+      const movY = (typeof e.movementY === 'number') ? e.movementY : (e.mozMovementY || e.webkitMovementY || 0);
 
-      // clamp pitch to avoid flipping
-      Player.pitch = Math.max(-Math.PI/2, Math.min(Math.PI/2, Player.pitch));
+      Player.yaw   -= movX * Player.sensitivity;
+      Player.pitch -= movY * Player.sensitivity;
+
+      // clamp pitch
+      const limit = Math.PI / 2 - 0.01;
+      if (Player.pitch > limit) Player.pitch = limit;
+      if (Player.pitch < -limit) Player.pitch = -limit;
     },
 
     /* ---------------------------------------------------------
@@ -117,7 +134,6 @@
 
     /* ---------------------------------------------------------
        Basic collision system
-       Uses getBlock from world.js
     --------------------------------------------------------- */
     _moveWithCollision: function () {
       if (!global.World) return;
@@ -126,23 +142,27 @@
       let newY = this.y + this.velY;
       let newZ = this.z + this.velZ;
 
-      const feet  = Math.floor(newY);
-      const head  = Math.floor(newY + 1.7);
+      const feetY = Math.floor(newY);
+      const headY  = Math.floor(newY + 1.7);
 
-      const blockFeet = World.getBlock(Math.floor(newX), feet, Math.floor(this.z));
-      const blockFeetZ = World.getBlock(Math.floor(this.x), feet, Math.floor(newZ));
-
-      // X collision
-      if (blockFeet === 0) {
+      // Check simple collisions along each axis
+      // X axis
+      const blockAtNewX = World.getBlock(Math.floor(newX), Math.floor(this.y), Math.floor(this.z));
+      if (blockAtNewX === 0) {
         this.x = newX;
+      } else {
+        this.velX = 0;
       }
 
-      // Z collision
-      if (blockFeetZ === 0) {
+      // Z axis
+      const blockAtNewZ = World.getBlock(Math.floor(this.x), Math.floor(this.y), Math.floor(newZ));
+      if (blockAtNewZ === 0) {
         this.z = newZ;
+      } else {
+        this.velZ = 0;
       }
 
-      // Y collision (floor)
+      // Y axis (vertical)
       const blockBelow = World.getBlock(Math.floor(this.x), Math.floor(newY), Math.floor(this.z));
       const blockAbove = World.getBlock(Math.floor(this.x), Math.floor(newY + 1.7), Math.floor(this.z));
 
@@ -150,13 +170,16 @@
         this.y = newY;
         this.onGround = false;
       } else {
-        if (this.velY < 0) this.onGround = true;
+        // landed or hit ceiling
+        if (this.velY < 0) {
+          this.onGround = true;
+        }
         this.velY = 0;
       }
     },
 
     /* ---------------------------------------------------------
-       Camera direction vector (for raycasting)
+       Camera direction
     --------------------------------------------------------- */
     getDirection: function () {
       const dx = Math.cos(this.pitch) * Math.sin(this.yaw);
@@ -166,7 +189,7 @@
     },
 
     /* ---------------------------------------------------------
-       Raycast (block targeting)
+       Raycast
     --------------------------------------------------------- */
     raycast: function (maxDist = 5.0) {
       const [dx, dy, dz] = this.getDirection();
@@ -175,10 +198,13 @@
       let y = this.y + 1.6; // camera height
       let z = this.z;
 
-      for (let i = 0; i < maxDist * 10; i++) {
-        x += dx * 0.1;
-        y += dy * 0.1;
-        z += dz * 0.1;
+      const step = 0.1;
+      const steps = Math.floor(maxDist / step) * 10;
+
+      for (let i = 0; i < steps; i++) {
+        x += dx * step;
+        y += dy * step;
+        z += dz * step;
 
         const bx = Math.floor(x);
         const by = Math.floor(y);
