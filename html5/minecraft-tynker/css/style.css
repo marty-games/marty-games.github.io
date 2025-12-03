@@ -1,11 +1,18 @@
 body {
-    overflow: hidden;
     margin: 0;
-    padding: 0;
+    overflow: hidden;
 }
 
-canvas#overlay {
+#glCanvas,
+#uiCanvas {
     position: absolute;
-    top: 0;
     left: 0;
+    top: 0;
+    width: 100vw;
+    height: 100vh;
+    display: block;
+}
+
+#uiCanvas {
+    pointer-events: none; /* allow clicking through */
 }
