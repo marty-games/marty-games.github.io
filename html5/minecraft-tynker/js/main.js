@@ -1,5 +1,4 @@
-// js/main.js
-// Entry point: initializes engine, world, player, textures, and starts render loop.
+// main.js — Fully fixed version
 
 (function (global) {
   'use strict';
@@ -8,36 +7,36 @@
 
   const Main = {
     init: function () {
-      /* -----------------------------------------------------
-         Initialize Engine + WebGL
-      ----------------------------------------------------- */
+
+      // ---------------- Engine Init ----------------
       Engine.init({ canvasId: "overlay" });
       gl = Engine.gl;
 
-      /* -----------------------------------------------------
-         Initialize modules
-      ----------------------------------------------------- */
+      // ---------------- Modules Init ----------------
       Textures.uploadToGL();
       World.init();
       Player.init();
-      requestAnimationFrame(() => UI.init());
 
-      /* -----------------------------------------------------
-         Generate chunks around spawn
-      ----------------------------------------------------- */
+      // DELAY UI INIT BY **2 FRAMES**
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          UI.init();
+        });
+      });
+
+      // ---------------- World Generation ----------------
       this._generateWorldAroundPlayer();
 
-      /* -----------------------------------------------------
-         Start loop
-      ----------------------------------------------------- */
+      // ---------------- Start Loop ----------------
       requestAnimationFrame(this.loop.bind(this));
+
+      // Interaction
+      this._handleBlockInteraction();
     },
 
-    /* ---------------------------------------------------------
-       Generate chunks in a radius around (0,0)
-    --------------------------------------------------------- */
+    // ---------------- World Gen ----------------
     _generateWorldAroundPlayer: function () {
-      const radius = 2; // generates a 5×5 chunk area
+      const radius = 2;
 
       for (let cx = -radius; cx <= radius; cx++) {
         for (let cz = -radius; cz <= radius; cz++) {
@@ -47,26 +46,23 @@
       }
     },
 
-    /* ---------------------------------------------------------
-       Block breaking and placing
-    --------------------------------------------------------- */
+    // ---------------- Block Actions ----------------
     _handleBlockInteraction: function () {
       const canvas = document.getElementById("overlay");
 
-      // break block (left click)
       canvas.addEventListener("mousedown", (e) => {
+        // BREAK
         if (e.button === 0) {
           const hit = Player.raycast(5);
           if (hit) {
             World.setBlock(hit.x, hit.y, hit.z, 0);
-
             const cx = Math.floor(hit.x / 16);
             const cz = Math.floor(hit.z / 16);
             World.buildChunkMeshes(cx, cz);
           }
         }
 
-        // place block (right click)
+        // PLACE
         if (e.button === 2) {
           const hit = Player.raycast(5);
           if (hit) {
@@ -85,42 +81,30 @@
         }
       });
 
-      // prevent context menu
       window.addEventListener("contextmenu", (e) => e.preventDefault());
     },
 
-    /* ---------------------------------------------------------
-       Render loop
-    --------------------------------------------------------- */
+    // ---------------- Main Loop ----------------
     loop: function () {
-
-      /* Update player physics */
       Player.update();
-
-      /* Render world */
       this._renderWorld();
 
-      /* Render UI overlay (2D) */
-      UI.render();
+      // Draw UI ONLY if ready
+      if (UI.ready) UI.render();
 
       requestAnimationFrame(this.loop.bind(this));
     },
 
-    /* ---------------------------------------------------------
-       World rendering
-    --------------------------------------------------------- */
+    // ---------------- Rendering ----------------
     _renderWorld: function () {
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-      // compute fresh view matrix
       const view = this._computeViewMatrix();
 
-      // select program
       Engine.useProgram("program3D");
       Engine.setViewMatrix("program3D", view);
       Engine.bindTextureToSampler("program3D", "uSampler", Textures.atlasTexture);
 
-      /* ----- Render all loaded chunks ------ */
       for (const key in World.chunks) {
         const chunk = World.chunks[key];
 
@@ -136,9 +120,7 @@
       }
     },
 
-    /* ---------------------------------------------------------
-       Compute view matrix (camera)
-    --------------------------------------------------------- */
+    // ---------------- View Matrix ----------------
     _computeViewMatrix: function () {
       const m = Engine.defaultView.slice();
 
@@ -148,20 +130,17 @@
       const cosP = Math.cos(Player.pitch);
 
       const px = Player.x;
-      const py = Player.y + 1.6; // eye height
+      const py = Player.y + 1.6;
       const pz = Player.z;
 
-      // rotate yaw (Y axis)
       m[0] = cosY;  m[2] = -sinY;
       m[8] = sinY;  m[10] = cosY;
 
-      // rotate pitch (X axis)
       m[5] = cosP;
       m[6] = sinP;
       m[9] = -sinP;
       m[10] = cosP;
 
-      // translation
       m[12] = -(px * m[0] + py * m[4] + pz * m[8]);
       m[13] = -(px * m[1] + py * m[5] + pz * m[9]);
       m[14] = -(px * m[2] + py * m[6] + pz * m[10]);
@@ -170,13 +149,10 @@
     }
   };
 
-  // Expose
   global.Main = Main;
 
-  /* Start the game */
   window.addEventListener("load", () => {
     Main.init();
-    Main._handleBlockInteraction();
   });
 
 })(window);
