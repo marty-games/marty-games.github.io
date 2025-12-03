@@ -1,7 +1,7 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <base href="https://rawcdn.githack.com/genizy/subwaysurfers/f81949004efd3b280f816a2390ae3e8236e7b034/html5/easter-edinburgh/">
     <meta charset="UTF-8">
     <script src="poki-sdk.js"></script>
     
@@ -13,6 +13,7 @@
     <meta name="viewport" content="height=device-height, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui, viewport-fit=cover" />
     <meta name="description" content="">
     
+    <link rel="manifest" href="subwaysurfers.webmanifest">
     <link rel="icon" href="assets/images/app-icon-16.png" type="image/png">
     <link rel="apple-touch-icon-precomposed" sizes="114x114" href="assets/images/app-icon-114.png">
     <link rel="apple-touch-icon-precomposed" sizes="72x72" href="assets/images/app-icon-72.png">
@@ -76,10 +77,13 @@
         }
         // https://github.com/pixijs/pixijs/issues/9414
         delete Array.prototype.group;
+        window.open = function () {};
     </script>
     <div id="message">
         <h1>Loading</h1>
-        <h1 class="dot one">.</h1><h1 class="dot two">.</h1><h1 class="dot three">.</h1>
+        <h1 class="dot one">.</h1>
+        <h1 class="dot two">.</h1>
+        <h1 class="dot three">.</h1>
     </div>
     <script src="js/loading.js"></script>
     <script src="js/boot.js"></script>
