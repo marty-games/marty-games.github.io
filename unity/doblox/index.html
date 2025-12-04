@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <title>google.com</title>
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/bubbls/robobs@main/style.css" />
+
+    <!-- Audio Plugins -->
+    <script src="https://cdn.jsdelivr.net/gh/bubbls/robobs@main/Web%20Audio%20Plugin/howler.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/bubbls/robobs@b685f532590449e8ed9fa5158ffd37fa7d7c1a0d/Web%20Audio%20Plugin/WebAudio.js"></script>
+
+    <!-- SDK Initialization -->
+    <script>
+        window.SDK_OPTIONS = {
+            gameId: "jp112o3o4hzgrnc7zaewjkrfk282pul8",
+            onEvent: function (a) {
+                switch (a.name) {
+                    case "SDK_GAME_PAUSE":
+                        if (typeof myGameInstance !== 'undefined' && myGameInstance) {
+                            myGameInstance.SendMessage('AudioManager', 'MuteAudio');
+                        }
+                        break;
+                    case "SDK_GAME_START":
+                        if (typeof myGameInstance !== 'undefined' && myGameInstance) {
+                            myGameInstance.SendMessage('AudioManager', 'UnmuteAudio');
+                        }
+                        break;
+                    case "SDK_READY":
+                        break;
+                }
+            }
+        };
+
+        (function (a, b, c) {
+            var d = a.getElementsByTagName(b)[0];
+            if (!a.getElementById(c)) {
+                var s = a.createElement(b);
+                s.id = c;
+                s.src = "https://cdn.jsdelivr.net/gh/testamalame/sef@main/sedk.js";
+                d.parentNode.insertBefore(s, d);
+            }
+        })(document, "script", "gamemonetize-sdk");
+    </script>
+
+    <style>
+        canvas:focus { outline: none; }
+        html, body {
+            padding: 0;
+            margin: 0;
+            overflow: hidden;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            height: 100%;
+        }
+    </style>
+</head>
+<body class="dark">
+
+    <!-- Unity Container -->
+    <div id="unity-container" class="unity-desktop">
+        <canvas id="unity-canvas" tabindex="-1"></canvas>
+    </div>
+
+    <!-- Loading Screen -->
+    <div id="loading-cover" style="display:none;">
+        <div id="unity-loading-bar">
+            <div id="unity-logo"><img src="" /></div>
+            <div id="unity-progress-bar-empty" style="display:none;">
+                <div id="unity-progress-bar-full"></div>
+            </div>
+            <div class="spinner"></div>
+        </div>
+    </div>
+
+    <!-- Unity Loader Script -->
+    <script>
+        const buildUrl = "https://cdn.jsdelivr.net/gh/bubbls/robobs@main/Build/";
+
+        const dataParts = [
+            "FameGame.data.gz.part000.gz",
+            "FameGame.data.gz.part001.gz",
+            "FameGame.data.gz.part002.gz"
+        ].map(p => buildUrl + p);
+
+        const wasmParts = [
+            "FameGame.wasm.gz.part000.gz",
+            "FameGame.wasm.gz.part001.gz",
+            "FameGame.wasm.gz.part002.gz",
+            "FameGame.wasm.gz.part003.gz"
+        ].map(p => buildUrl + p);
+
+        async function combineParts(parts) {
+            const buffers = await Promise.all(parts.map(p => fetch(p).then(r => r.arrayBuffer())));
+            const size = buffers.reduce((a,b) => a + b.byteLength, 0);
+            const combined = new Uint8Array(size);
+
+            let offset = 0;
+            for (const buf of buffers) {
+                combined.set(new Uint8Array(buf), offset);
+                offset += buf.byteLength;
+            }
+            return URL.createObjectURL(new Blob([combined]));
+        }
+
+        const config = {
+            dataUrl: "",
+            frameworkUrl: buildUrl + "FameGame.framework.js",
+            codeUrl: "",
+            streamingAssetsUrl: "https://cdn.jsdelivr.net/gh/bubbls/robobs@tree/main/StreamingAssets",
+            companyName: "Marty Games",
+            productName: "Doblox",
+            productVersion: "1.0"
+        };
+
+        const loaderUrl = buildUrl + "FameGame.loader.js";
+
+        const container = document.querySelector('#unity-container');
+        const canvas = document.querySelector('#unity-canvas');
+        const loadingCover = document.querySelector('#loading-cover');
+        const progressBarEmpty = document.querySelector('#unity-progress-bar-empty');
+        const progressBarFull = document.querySelector('#unity-progress-bar-full');
+        const spinner = document.querySelector('.spinner');
+
+        loadingCover.style.background = "url('https://cdn.jsdelivr.net/gh/classrooms-1/ohanganamaranes@main/background.jpg') center/cover";
+        loadingCover.style.display = "";
+
+        function FocusGame() {
+            window.focus();
+            canvas.focus();
+        }
+
+        window.addEventListener('pointerdown', FocusGame);
+        window.addEventListener('touchstart', FocusGame);
+
+        let myGameInstance = null;
+
+        // Ad click
+        function showAdOnClick() {
+            if (typeof sdk !== 'undefined' && sdk.showBanner) {
+                sdk.showBanner();
+            }
+        }
+
+        // Load Unity Loader
+        const script = document.createElement('script');
+        script.src = loaderUrl;
+        script.onload = async () => {
+            config.dataUrl = await combineParts(dataParts);
+            config.codeUrl = await combineParts(wasmParts);
+
+            createUnityInstance(canvas, config, (progress) => {
+                spinner.style.display = 'none';
+                progressBarEmpty.style.display = '';
+                progressBarFull.style.width = `${progress * 100}%`;
+            }).then(instance => {
+                myGameInstance = instance;
+                loadingCover.style.display = 'none';
+
+                canvas.addEventListener('pointerdown', showAdOnClick);
+                canvas.addEventListener('touchstart', showAdOnClick);
+
+                URL.revokeObjectURL(config.dataUrl);
+                URL.revokeObjectURL(config.codeUrl);
+
+            }).catch(err => console.error(err));
+        };
+
+        document.body.appendChild(script);
+
+        window.addEventListener('unhandledrejection', evt => evt.preventDefault());
+    </script>
+
+</body>
+</html>
